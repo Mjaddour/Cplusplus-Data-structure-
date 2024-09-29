@@ -3,10 +3,11 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <unordered_map>
 
 using namespace std;
 
-// Define a structure to represent a course
+// Define a tructure to represent a course
 struct Course {
     string courseNumber;
     string name;
@@ -14,48 +15,67 @@ struct Course {
 };
 
 // Function to split a string into tokens based on a delimiter
-vector<string> tokensize(const string& inputString, const string& del = "") {
+vector<string> tokensize(const string& inputString, const string& del = ",") {
     vector<string> stringArray;
     size_t start = 0;
     size_t end = inputString.find(del);
     while (end != string::npos) {
-        stringArray.push_back(inputString.substr(start, end - start));
+        stringArray.emplace_back(inputString.substr(start, end - start));
         start = end + del.size();
         end = inputString.find(del, start);
     }
-    stringArray.push_back(inputString.substr(start, end - start));
+    stringArray.emplace_back(inputString.substr(start, end - start));
     return stringArray;
 }
 
+
 // Function to load course data from a text file
-vector<Course> LoadDataStructure() {
+unordered_map<string, Course> LoadDataStructure() {
     ifstream find("ABCU_Advising_Program_Input.csv", ios::in);
-    vector<Course> courses;
+    // Use unordered_map for fast lookup
+    unordered_map<string, Course> courseMap; 
     string line;
-    while (getline(find, line)) { // Read lines until end of file
+    
+    if (!find.is_open()) {
+        cerr << "Error: Could not open the file!" << endl;
+        return courseMap;
+    }
+    
+    // Read lines until end of file
+    while (getline(find, line)) { 
         if (line.empty())
             continue;
 
         Course course;
-        vector<string> tokenInformation = tokensize(line, ",");
+        vector<string> tokenInformation = tokensize(line);
         course.courseNumber = tokenInformation[0];
         course.name = tokenInformation[1];
+        
         for (unsigned i = 2; i < tokenInformation.size(); ++i) {
             course.prerequisites.push_back(tokenInformation[i]);
         }
-        courses.push_back(course);
+        
+        // Store course in unordered_map
+        courseMap[course.courseNumber] = course; 
     }
+    
     find.close();
-    return courses;
+    return courseMap;
 }
 
 // Function to print details of a single course
-void printCourse(Course course) {
-    string courseNumber = course.courseNumber;
-    string name = course.name;
-    vector<string> prerequisites = course.prerequisites;
-    cout << courseNumber << ", " << name;
-
+void printCourse(const Course& course) {
+    cout << course.courseNumber << ", " << course.name << endl;
+    cout << "Prerequisites: ";
+    if (course.prerequisites.empty()) {
+        cout << "None";
+    } else {
+        for (unsigned j = 0; j < course.prerequisites.size(); ++j) {
+            cout << course.prerequisites[j];
+            if (j < course.prerequisites.size() - 1)
+                cout << ", ";
+        }
+    }
     cout << endl << endl;
 }
 
@@ -64,7 +84,7 @@ void printCourseList(const vector<Course>& courses) {
     vector<Course> sortedCourses = courses; // Make a copy for sorting
     sort(sortedCourses.begin(), sortedCourses.end(), [](const Course& a, const Course& b) {
         return a.name < b.name;
-        });
+    });
 
     cout << "Sorted list of courses in alphabetical order by name:" << endl;
     for (const Course& course : sortedCourses) {
@@ -74,48 +94,29 @@ void printCourseList(const vector<Course>& courses) {
 
 
 // Function to search for a specific course and display its details
-void searchCourse(const vector<Course>& courses) { // Pass vector by const reference
-    int n = courses.size();
+void searchCourse(const unordered_map<string, Course>& courseMap) {
     string courseNumber;
-    int flag = 0;
     cout << "What course do you want to know about? ";
     cin >> courseNumber;
-
-    for (unsigned i = 0; i < n; i++) {
-        if (courses[i].courseNumber == courseNumber) {
-            flag = 1;
-            string name = courses[i].name;
-            vector<string> prerequisites = courses[i].prerequisites;
-            cout << courseNumber << ", " << name << endl;
-            cout << "Prerequisites: ";
-            if (prerequisites.empty()) {
-                cout << "None";
-            }
-            else {
-                for (unsigned j = 0; j < prerequisites.size(); j++) {
-                    cout << prerequisites[j];
-                    if (j < prerequisites.size() - 1)
-                        cout << ", ";
-                }
-            }
-            cout << endl << endl;
-
-            break; // No need to continue searching
-        }
-    }
-
-    if (flag == 0) {
+    
+    // Use map lookup
+    auto it = courseMap.find(courseNumber); 
+    if (it != courseMap.end()) {
+        // Print course details if found
+        printCourse(it->second); 
+    } else {
         cout << "Course with given course number not found" << endl;
     }
 }
 
-int main(int argc, char** argv) {
+int main() {
+    unordered_map<string, Course> courseMap;
     vector<Course> courses;
+    
     cout << "Welcome to the course planner." << endl;
-    cout << endl;
 
-    int choice;
-    while (choice != 9); {
+    int choice = 0;
+    while (choice != 9) {
         cout << endl;
         cout << "   1. Load Data Structure." << endl;
         cout << "   2. Print Course List." << endl;
@@ -123,36 +124,52 @@ int main(int argc, char** argv) {
         cout << "   9. Exit" << endl;
         cout << endl;
         cout << "What would you like to do? ";
-        cin >> choice;
+        
+        // Input validation for menu selection
+        while (!(cin >> choice)) {
+            // Clear the error flag
+            cin.clear(); 
+            // Ignore invalid input
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+            cout << "Please enter a valid number: ";
+        }
 
         switch (choice) {
         case 1:
-            courses = LoadDataStructure(); // Load course data
+            // Load course data
+            courseMap = LoadDataStructure(); 
+            courses.clear();
+            for (const auto& pair : courseMap) {
+                // Fill vector with courses for sorting
+                courses.push_back(pair.second); 
+            }
             break;
         case 2:
             if (courses.empty()) {
                 cout << "No data loaded. Please load data first." << endl;
-            }
-            else {
+            } else {
                 cout << "Here is a sample schedule:" << endl << endl;
-                printCourseList(courses); // Print the list of courses
+                // Print the list of courses
+                printCourseList(courses); 
             }
             break;
         case 3:
-            if (courses.empty()) {
+            if (courseMap.empty()) {
                 cout << "No data loaded. Please load data first." << endl;
-            }
-            else {
-                searchCourse(courses); // Search for a specific course
+            } else {
+                // Search for a specific course
+                searchCourse(courseMap); 
             }
             break;
         case 9:
-            cout << "Thank you for using the course planner!" << endl; // Exit message
+            // Exit message
+            cout << "Thank you for using the course planner!" << endl; 
             break;
         default:
-            cout << choice << " is not a valid option." << endl; // Invalid choice
+            // Invalid choice
+            cout << choice << " is not a valid option." << endl; 
         }
-    } 
+    }
 
     return 0;
 }
