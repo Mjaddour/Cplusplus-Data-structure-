@@ -123,7 +123,7 @@ int main() {
         cout << "   3. Print Course." << endl;
         cout << "   9. Exit" << endl;
         cout << endl;
-        cout << "What would you like to do?";
+        cout << "What would you like to do? ";
         
         // Input validation for menu selection
         while (!(cin >> choice)) {
