@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>
 #include <unordered_map>
+#include <limits>
 
 using namespace std;
 
@@ -32,35 +33,40 @@ vector<string> tokensize(const string& inputString, const string& del = ",") {
 // Function to load course data from a text file
 unordered_map<string, Course> LoadDataStructure() {
     ifstream find("ABCU_Advising_Program_Input.csv", ios::in);
-    // Use unordered_map for fast lookup
-    unordered_map<string, Course> courseMap; 
+    unordered_map<string, Course> courseMap;
     string line;
-    
+
     if (!find.is_open()) {
         cerr << "Error: Could not open the file!" << endl;
         return courseMap;
     }
-    
-    // Read lines until end of file
-    while (getline(find, line)) { 
+
+    while (getline(find, line)) {
         if (line.empty())
             continue;
 
         Course course;
         vector<string> tokenInformation = tokensize(line);
+
+        if (tokenInformation.size() < 2) {
+            cerr << "Error: Malformed line in input file: " << line << endl;
+            continue; // Skip this line and move to the next
+        }
+
         course.courseNumber = tokenInformation[0];
         course.name = tokenInformation[1];
-        
+
+        // If there are any prerequisites, store them
         for (unsigned i = 2; i < tokenInformation.size(); ++i) {
             course.prerequisites.push_back(tokenInformation[i]);
         }
-        
-        // Store course in unordered_map
-        courseMap[course.courseNumber] = course; 
+
+        courseMap[course.courseNumber] = course;
     }
-    
+
     find.close();
     return courseMap;
+  
 }
 
 // Function to print details of a single course
@@ -136,38 +142,36 @@ int main() {
 
         switch (choice) {
         case 1:
-            // Load course data
-            courseMap = LoadDataStructure(); 
-            courses.clear();
-            for (const auto& pair : courseMap) {
-                // Fill vector with courses for sorting
-                courses.push_back(pair.second); 
+            courseMap = LoadDataStructure();
+            if (courseMap.empty()) {
+                cout << "Error: No data loaded. Ensure the file is correct." << endl;
+            } else {
+                courses.clear();
+                for (const auto& pair : courseMap) {
+                    courses.push_back(pair.second);
+                }
+                cout << "Data loaded successfully!" << endl;
             }
             break;
         case 2:
             if (courses.empty()) {
                 cout << "No data loaded. Please load data first." << endl;
             } else {
-                cout << "Here is a sample schedule:" << endl << endl;
-                // Print the list of courses
-                printCourseList(courses); 
+                printCourseList(courses);
             }
             break;
         case 3:
             if (courseMap.empty()) {
                 cout << "No data loaded. Please load data first." << endl;
             } else {
-                // Search for a specific course
-                searchCourse(courseMap); 
+                searchCourse(courseMap);
             }
             break;
         case 9:
-            // Exit message
-            cout << "Thank you for using the course planner!" << endl; 
+            cout << "Thank you for using the course planner!" << endl;
             break;
         default:
-            // Invalid choice
-            cout << choice << " is not a valid option." << endl; 
+            cout << choice << " is not a valid option." << endl;
         }
     }
 
